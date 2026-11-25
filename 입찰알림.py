@@ -704,6 +704,7 @@ details.sum td{{padding:5px 8px}}
 <h1>🍽 구내식당 입찰현황</h1>
 <div class="meta">마지막 확인 {dt.datetime.now():%Y-%m-%d %H:%M} · 총 {len(all_items)}건 · 새 공고 {len(new_ids)}건</div>
 {rows_html}
+<h3 style="font-size:14px;margin:22px 0 4px;color:#444">사이트별 확인 상태</h3>
 <ul>{st}</ul>
 <script>
 document.querySelectorAll('.tab').forEach(b => b.onclick = () => {{
@@ -719,17 +720,31 @@ def main():
     seen = set(json.loads(SEEN_FILE.read_text(encoding="utf-8"))) if SEEN_FILE.exists() else set()
     found = {x["id"]: x for x in json.loads(DATA_FILE.read_text(encoding="utf-8"))} if DATA_FILE.exists() else {}
     KNOWN.update(found)
-    status = {}
-    for name, fn in (("나라장터", fetch_g2b), ("한전 전자조달", fetch_kepco), ("온비드", fetch_onbid), ("국방전자조달", fetch_d2b), ("코레일", fetch_korail),
-                     ("전남대", fetch_jnu), ("대학·병원 게시판", fetch_boards)):
+    html_only = "--html-only" in sys.argv      # 수집 없이 저장된 결과로 웹페이지만 다시 만듦
+    where = "PC" if IS_WINDOWS else "서버"
+    now_s = f"{dt.datetime.now():%m-%d %H:%M}"
+    src_state = STATE.setdefault("출처상태", {})   # 출처별 마지막 성공 기록 (PC·서버 결과 합치기용)
+    sources = (("나라장터", fetch_g2b), ("한전 전자조달", fetch_kepco), ("온비드", fetch_onbid), ("국방전자조달", fetch_d2b),
+               ("코레일", fetch_korail), ("전남대", fetch_jnu), ("대학·병원 게시판", fetch_boards))
+    for name, fn in ([] if html_only else sources):
         try:
             items = fn()
             for x in items:
+                prev = found.get(x["id"], {})
+                if prev.get("요약") and not x.get("요약"):
+                    x["요약"] = prev["요약"]
                 found[x["id"]] = x
-            status[name] = f"정상 ({len(items)}건)"
+            src_state[name] = {"ok": f"{now_s} {where} ({len(items)}건)", "err": ""}
         except Exception as e:
-            status[name] = f"오류: {e}"
+            src_state.setdefault(name, {})["err"] = f"{now_s} {where}: {str(e)[:80]}"
             log(f"{name} 오류: {e}\n{traceback.format_exc()}")
+    status = {}
+    for name, _ in sources:
+        s = src_state.get(name, {})
+        txt = f"마지막 정상 확인 {s['ok']}" if s.get("ok") else "아직 확인 못함"
+        if s.get("err"):
+            txt += f" / 최근 실패 {s['err']}"
+        status[name] = txt
     # 오래된 공고 정리 (약 5개월)
     cutoff = (dt.date.today() - dt.timedelta(days=HISTORY_DAYS)).isoformat()
     found = {k: v for k, v in found.items() if (v.get("공고일") or "9999") >= cutoff and title_ok(v["공고명"])}
@@ -738,9 +753,16 @@ def main():
             v["권역"] = region_of(f"{v['공고명']} {v['기관']}")
     found = {k: v for k, v in found.items() if v.get("권역")}
 
-    unseen = [x for k, x in found.items() if k not in seen]
+    unseen = [] if html_only else [x for k, x in found.items() if k not in seen]
     new = [x for x in unseen if not is_past(x)]          # 알림은 진행 중 공고만
-    write_html(list(found.values()), {x["id"] for x in new}, status)
+    for x in unseen:
+        x["발견"] = dt.datetime.now().isoformat(timespec="minutes")
+    recent = (dt.datetime.now() - dt.timedelta(hours=24)).isoformat(timespec="minutes")
+    new_ids = {x["id"] for x in found.values() if x.get("발견", "") >= recent and not is_past(x)}
+    write_html(list(found.values()), new_ids, status)
+    if html_only:
+        log("웹페이지만 다시 만듦")
+        return
     DATA_FILE.write_text(json.dumps(list(found.values()), ensure_ascii=False, indent=1), encoding="utf-8")
     STATE_FILE.write_text(json.dumps(STATE, ensure_ascii=False), encoding="utf-8")
     if new:
@@ -748,10 +770,9 @@ def main():
         notify_telegram(new)
     if unseen:
         SEEN_FILE.write_text(json.dumps(sorted(seen | {x["id"] for x in unseen}), ensure_ascii=False), encoding="utf-8")
-    log(f"완료: 새 공고 {len(new)}건 (지난 공고 {len(unseen) - len(new)}건 조용히 추가) / "
-        + ", ".join(f"{k} {v}" for k, v in status.items()))
+    log(f"완료({where}): 새 공고 {len(new)}건 (지난 공고 {len(unseen) - len(new)}건 조용히 추가) / "
+        + ", ".join(f"{k}: {v}" for k, v in status.items()))
     if "--open" in sys.argv:
-        import os
         os.startfile(HTML_FILE)
 
 

@@ -8,3 +8,4 @@ __pycache__/
 *.pyc
 data/log.txt
 data/입찰현황.html
+data/pc_sync.log

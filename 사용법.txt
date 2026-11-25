@@ -34,6 +34,14 @@
 [휴대폰으로도 받고 싶으면 (선택)]
  텔레그램에서 @BotFather 로 봇을 만들고 토큰과 채팅ID를 config.json 에 넣으면 됩니다.
 
+[GitHub 자동 실행 - PC가 꺼져 있어도 됨]
+ 저장소 : https://github.com/hanvit5999-code/gwangju-cafeteria-bids
+ 현황 웹페이지 : https://hanvit5999-code.github.io/gwangju-cafeteria-bids/
+ 매일 오전 9시에 GitHub 서버가 자동 실행 → 웹페이지 갱신. 결과 기록은 저장소의 data/ 폴더에 저장됨.
+ 수동 실행 : 저장소 → Actions → "매일 입찰 확인" → Run workflow
+ 휴대폰 알림 : 저장소 Settings → Secrets → Actions 에 TELEGRAM_TOKEN, TELEGRAM_CHAT_ID 를 넣으면 텔레그램으로 옴
+ 프로그램을 고친 뒤 올릴 때 : 이 폴더에서  git pull  후  git add -A ; git commit -m "수정" ; git push
+
 [직접 확인]  지금확인.bat 더블클릭 → 바로 확인 후 현황 페이지가 열립니다.
 [광주권 / 전남권 탭]
  현황 페이지가 두 탭으로 나뉩니다.

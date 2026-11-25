@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: "0 0 * * *"      # 매일 00:00 UTC = 한국시간 오전 9시
   workflow_dispatch:          # Actions 화면에서 수동 실행 버튼
+  push:                       # PC가 확인 결과(data/)를 올리면 웹페이지만 다시 만듦
+    branches: [main]
+    paths: ["data/**"]
 
 permissions:
   contents: write             # data/ 폴더 결과 저장
@@ -31,24 +34,36 @@ jobs:
       - name: 설치
         run: |
           pip install -r requirements.txt
-          python -m playwright install --with-deps chromium
-          sudo apt-get install -y fonts-noto-cjk >/dev/null
+          if [ "${{ github.event_name }}" != "push" ]; then
+            python -m playwright install --with-deps chromium
+          fi
 
-      - name: 입찰 확인
+      - name: 입찰 확인 (PC 결과가 올라온 경우엔 웹페이지만)
         env:
           BID_DATA_DIR: data
           TZ: Asia/Seoul
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python 입찰알림.py
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            python 입찰알림.py --html-only
+          else
+            python 입찰알림.py
+          fi
 
       - name: 결과 저장
+        if: github.event_name != 'push'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/seen.json data/found.json data/state.json
-          git diff --cached --quiet || git commit -m "입찰 결과 업데이트 $(TZ=Asia/Seoul date +'%Y-%m-%d %H:%M')"
-          git push
+          if ! git diff --cached --quiet; then
+            git commit -m "서버 확인 결과 $(TZ=Asia/Seoul date +'%Y-%m-%d %H:%M')"
+            for i in 1 2 3; do
+              git pull --rebase -X theirs && git push && break
+              sleep 15
+            done
+          fi
 
       - name: 웹페이지 준비
         run: |
