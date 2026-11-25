@@ -1,0 +1,10 @@
+# PC에서 돌릴 때 생기는 파일 (GitHub 에서는 data/ 폴더를 씀)
+/seen.json
+/found.json
+/state.json
+/log.txt
+/입찰현황.html
+__pycache__/
+*.pyc
+data/log.txt
+data/입찰현황.html

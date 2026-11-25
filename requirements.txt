@@ -1,0 +1,5 @@
+requests
+beautifulsoup4
+lxml
+playwright
+winotify; sys_platform == "win32"
