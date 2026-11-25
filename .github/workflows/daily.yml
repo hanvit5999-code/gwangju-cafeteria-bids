@@ -81,5 +81,8 @@ jobs:
         with:
           path: _site
 
+      - name: 업로드 반영 대기 (바로 배포하면 GitHub이 파일을 못 찾는 경우가 있음)
+        run: sleep 20
+
       - id: deploy
         uses: actions/deploy-pages@v4
