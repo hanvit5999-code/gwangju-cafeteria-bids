@@ -171,7 +171,8 @@ def fetch_g2b():
                     "기관": inst if inst == order or not order else f"{inst} ({order})",
                     "공고일": dates[0] if dates else "", "마감일": dates[1] if len(dates) > 1 else "",
                     "금액": it.get("prspPrce") or it.get("alotBgtAmt") or "",
-                    "링크": "https://www.g2b.go.kr", "공고번호": no,
+                    "링크": html.unescape(it.get("linkInstPbancLnkUrl") or "") or g2b_link(no, it.get("prcmBsneSeCdNm")),
+                    "공고번호": no,
                 }
 
         # 상세화면 핵심항목 요약 (이미 요약된 공고는 이전 것 재사용, 지난 공고는 생략)
@@ -194,6 +195,14 @@ def fetch_g2b():
 
 MAX_DETAIL = 30
 KNOWN = {}  # main() 에서 이전 결과로 채움
+
+
+def g2b_link(no, kind=""):
+    """공고 상세화면 바로가기 (물품·일반용역 등 확인). '기타'·'민간' 공고는 이 주소로 안 열려서 나라장터 첫 화면"""
+    m = re.match(r"([A-Z0-9]+)-(\d+)$", no or "")
+    if not m or (kind or "").startswith(("기타", "민간")):
+        return "https://www.g2b.go.kr"
+    return f"https://www.g2b.go.kr/link/PNPE027_01/single/?bidPbancNo={m.group(1)}&bidPbancOrd={m.group(2)}"
 
 DETAIL_JS = r"""
 () => {
@@ -428,7 +437,10 @@ def fetch_onbid():
             out[no] = {
                 "id": "ONBID:" + no, "출처": "온비드", "공고명": title, "기관": org, "권역": region,
                 "공고일": (p.get("pbancDt") or "")[:10], "마감일": p.get("pbctDdlnDt") or "",
-                "금액": "", "공고번호": no, "링크": "https://www.onbid.co.kr",
+                "금액": "", "공고번호": no,
+                "링크": ("https://www.onbid.co.kr/op/cltrpbancinf/pbanc/pbancdtlinf/PbancDtlInqController/mvmnPbancDtl.do"
+                         f"?onbidPbancNo={p.get('onbidPbancNo')}&pbctNo={p.get('pbctNo')}")
+                        if p.get("onbidPbancNo") and p.get("pbctNo") else "https://www.onbid.co.kr",
                 "요약": {k: v for k, v in summ.items() if v},
             }
     return list(out.values())
@@ -752,6 +764,8 @@ def main():
     for v in found.values():  # 예전 저장분 권역 채우기
         if "권역" not in v:
             v["권역"] = region_of(f"{v['공고명']} {v['기관']}")
+        if v.get("링크") == "https://www.g2b.go.kr" and v["id"].startswith("G2B:"):   # 예전 저장분 바로가기 주소
+            v["링크"] = g2b_link(v.get("공고번호"), v.get("출처", "").split("(")[-1])
     found = {k: v for k, v in found.items() if v.get("권역")}
 
     unseen = [] if html_only else [x for k, x in found.items() if k not in seen]

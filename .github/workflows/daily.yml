@@ -65,10 +65,17 @@ jobs:
             done
           fi
 
-      - name: 웹페이지 준비
+      - name: 웹페이지 준비 (PAGE_PASSWORD 비밀값이 있으면 비밀번호로 잠금)
+        env:
+          PAGE_PASSWORD: ${{ secrets.PAGE_PASSWORD }}
         run: |
           mkdir -p _site
-          cp "data/입찰현황.html" _site/index.html
+          if [ -n "$PAGE_PASSWORD" ]; then
+            pip install -q cryptography
+            python encrypt_page.py "data/입찰현황.html" _site/index.html
+          else
+            cp "data/입찰현황.html" _site/index.html
+          fi
 
       - uses: actions/upload-pages-artifact@v3
         with:
