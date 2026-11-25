@@ -5,6 +5,7 @@ Set-Location -LiteralPath $PSScriptRoot
 $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
 $env:BID_DATA_DIR = "data"
 $env:PYTHONIOENCODING = "utf-8"
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
 $logFile = Join-Path $PSScriptRoot "data\pc_sync.log"
 function Write-Log($m) { "[$(Get-Date -Format 'yyyy-MM-dd HH:mm')] $m" | Out-File -FilePath $logFile -Append -Encoding utf8 }
 
