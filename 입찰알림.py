@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 
 BASE = Path(__file__).resolve().parent
 CONFIG = json.loads((BASE / "config.json").read_text(encoding="utf-8"))
-DATA_DIR = Path(os.environ.get("BID_DATA_DIR") or BASE)   # GitHub 에선 data/ 폴더
+DATA_DIR = Path(os.environ.get("BID_DATA_DIR") or BASE).resolve()   # GitHub 에선 data/ 폴더 (알림 링크용 절대경로)
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 SEEN_FILE = DATA_DIR / "seen.json"
 DATA_FILE = DATA_DIR / "found.json"
