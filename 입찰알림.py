@@ -32,7 +32,7 @@ EXCLUDE = CONFIG.get("제외_키워드", ["리모델링", "보수", "철거", "�
                                         "김치류", "공산품", "축산물", "농산물", "수산물", "청소",
                                         "식재료", "급식재료", "부식", "쌀", "소모품", "냉난방기", "탑차", "기자재", "설치",
                                         "야채류", "어패류", "육계류", "육류", "주식류", "김치", "우유", "식기", "급식기구",
-                                        "공조설비", "컨베이어", "급식물품", "급식용 식품", "물품구매"])
+                                        "공조설비", "컨베이어", "급식물품", "급식용 식품", "물품구매", "카페트", "매점용품", "가구", "환경개선"])
 DAYS = int(CONFIG.get("조회_기간_일", 14))
 HISTORY_DAYS = int(CONFIG.get("지난공고_보관_일", 150))   # 약 5개월
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
@@ -65,7 +65,7 @@ def log(msg):
         f.write(line + "\n")
 
 
-FOOD = CONFIG.get("음식_키워드", ["식당", "급식", "식음", "카페테리아", "조리", "식사", "매점", "학생마루"])
+FOOD = CONFIG.get("음식_키워드", ["식당", "급식", "식음", "카페", "조리", "식사", "매점", "학생마루"])
 
 
 def title_ok(title):
@@ -85,10 +85,10 @@ MERGED = ("전남광주통합특별시", "광주전남통합특별시")
 
 def region_of(text):
     """'광주권' / '전남권' / None"""
+    if any(w in text for w in NOT_REGION):   # 서영대 파주캠퍼스처럼 다른 지역 캠퍼스는 먼저 제외
+        return None
     if any(o in text for o in GJ_ORGS):
         return "광주권"
-    if any(w in text for w in NOT_REGION):
-        return None
     merged = any(m in text for m in MERGED)
     t = text
     for m in MERGED:
@@ -399,7 +399,7 @@ def fetch_onbid():
         jobs.append((search("pbanc", kw).get("pbancSrchRslt", []) or [], local_pbanc))
     # 지난 공고(공고결과): 날짜 조건이 안 먹어서 '지역 + 키워드'로 검색 후 날짜로 거름
     for r_ in ("광주", "전남"):
-        for k in ("식당", "구내식당", "급식", "카페테리아", "식음"):
+        for k in ("식당", "구내식당", "급식", "카페", "식음"):
             for pg in (1, 2, 3):
                 j = search("pbancRslt", f"{r_} {k}", pg)
                 rows = j.get("pbancRsltSrchRslt", []) or []
