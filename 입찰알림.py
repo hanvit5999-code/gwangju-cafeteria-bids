@@ -88,7 +88,8 @@ def region_of(text):
     if any(w in text for w in NOT_REGION):   # 서영대 파주캠퍼스처럼 다른 지역 캠퍼스는 먼저 제외
         return None
     if any(o in text for o in GJ_ORGS):
-        return "광주권"
+        # 전남대 여수캠퍼스처럼 광주권 기관이라도 전남 시군이 적혀 있으면 전남권
+        return "전남권" if any(w in text for w in JN_WORDS) else "광주권"
     merged = any(m in text for m in MERGED)
     t = text
     for m in MERGED:
@@ -319,7 +320,7 @@ def kepco_region(path, title):
     if "본사" in path:
         return "광주권"
     regional = (r"(서울|남서울|인천|경기|경기북부|강원|충북|대전|세종|충남|전북|대구|경북|부산|울산|경남|제주|발전)본부"
-                r"|사업소|지사|발전소|원자력|변환소|연수원|청운재|인재개발원")
+                r"|사업소|지사|발전소|원자력|변환소|연수원|청운재|인재개발원|아트센터|배구|수안보|건설본부")
     if path.startswith(KEPCO_COMPANIES) and not re.search(regional, path + " " + title):
         return "광주권"
     return None
